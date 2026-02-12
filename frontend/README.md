@@ -60,3 +60,30 @@ student-enrollment-system/
     vite.config.js
 
 
+git clone https://github.com/mujahidhofficial-oss/gamage_student_entrollment_system.git
+
+cd student-enrollment-system
+
+
+
+
+cd backend
+npm install
+npm run dev
+
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/student_enrollment_db
+
+
+cd frontend
+npm install
+npm run dev
+
+
+Frontend runs at:
+
+http://localhost:5173
+
+Backend runs at:
+
+http://localhost:5000
