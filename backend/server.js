@@ -19,6 +19,12 @@ app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
+// Health check for frontend (Online/Offline)
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+
 const PORT = process.env.PORT || 5000;
 
 // Start server only after DB connect

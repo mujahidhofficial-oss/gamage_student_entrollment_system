@@ -4,6 +4,7 @@ import {
   deleteStudent,
   getStudents,
   updateStudent,
+  checkHealth,
 } from "../api/studentApi";
 import StudentForm from "../components/StudentForm";
 import StudentTable from "../components/StudentTable";
@@ -18,6 +19,9 @@ export default function Dashboard() {
 
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+
+  // ✅ Backend Online/Offline
+  const [backendOnline, setBackendOnline] = useState(null); // null = checking
 
   const [form, setForm] = useState({
     name: "",
@@ -39,8 +43,22 @@ export default function Dashboard() {
     }
   };
 
+  const pingBackend = async () => {
+    try {
+      await checkHealth();
+      setBackendOnline(true);
+    } catch {
+      setBackendOnline(false);
+    }
+  };
+
   useEffect(() => {
     load();
+
+    // ✅ health check now + every 5s
+    pingBackend();
+    const id = setInterval(pingBackend, 5000);
+    return () => clearInterval(id);
   }, []);
 
   const courses = useMemo(() => {
@@ -110,14 +128,68 @@ export default function Dashboard() {
     setError("");
   };
 
-  const remove = async (id) => {
-    if (!confirm("Delete this student?")) return;
+  // ✅ Better delete confirm: shows name
+  const remove = async (student) => {
+    const name = student?.name || "this student";
+    if (!confirm(`Delete "${name}"?`)) return;
+
     try {
-      await deleteStudent(id);
+      await deleteStudent(student._id);
       await load();
     } catch {
       setError("Delete failed");
     }
+  };
+
+  // ✅ Reset filters
+  const resetFilters = () => {
+    setSearch("");
+    setCourseFilter("All");
+  };
+
+  // ✅ Export CSV (filtered list)
+  const exportCSV = () => {
+    const rows = filtered; // export what user sees
+    if (!rows.length) {
+      alert("No students to export.");
+      return;
+    }
+
+    const headers = ["Name", "Email", "Phone", "Course", "Status"];
+    const escape = (val) => {
+      const s = String(val ?? "");
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+
+    const csv = [
+      headers.join(","),
+      ...rows.map((s) =>
+        [
+          escape(s.name),
+          escape(s.email),
+          escape(s.phone),
+          escape(s.course),
+          escape(s.status),
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+
+    const date = new Date();
+    const fileName = `students_${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+      date.getDate()
+    ).padStart(2, "0")}.csv`;
+
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -135,9 +207,24 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* ✅ Real Online/Offline */}
           <div className="hidden sm:flex items-center gap-2 text-sm text-slate-200">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            Backend: <span className="font-semibold text-emerald-300">Online</span>
+            {backendOnline === null ? (
+              <>
+                <span className="h-2 w-2 rounded-full bg-slate-400" />
+                Backend: <span className="font-semibold text-slate-300">Checking...</span>
+              </>
+            ) : backendOnline ? (
+              <>
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                Backend: <span className="font-semibold text-emerald-300">Online</span>
+              </>
+            ) : (
+              <>
+                <span className="h-2 w-2 rounded-full bg-red-400" />
+                Backend: <span className="font-semibold text-red-300">Offline</span>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -178,6 +265,12 @@ export default function Dashboard() {
               {error}
             </div>
           )}
+
+          {backendOnline === false && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              Backend is offline. Please start the backend server.
+            </div>
+          )}
         </aside>
 
         {/* MAIN CONTENT */}
@@ -198,6 +291,8 @@ export default function Dashboard() {
               courseFilter={courseFilter}
               setCourseFilter={setCourseFilter}
               courses={courses}
+              onReset={resetFilters}
+              onExport={exportCSV}
             />
 
             <StudentTable

@@ -41,7 +41,7 @@ export default function StudentTable({ loading, students, onEdit, onDelete }) {
                     Edit
                   </button>
                   <button
-                    onClick={() => onDelete(s._id)}
+                    onClick={() => onDelete(s)}
                     className="rounded-lg border border-red-200 text-red-700 px-2 py-1 hover:bg-red-50"
                   >
                     Delete
